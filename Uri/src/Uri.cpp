@@ -45,6 +45,7 @@ namespace Uri
  * This contains the private properties of a URI instance.
  */
 struct Uri::Impl {
+    // Properties
     /**
      * This field represents whether the URI has scheme or not.
      */
@@ -96,6 +97,35 @@ struct Uri::Impl {
      * This is the "user info" element of the URI.
      */
     std::string userInfo;
+
+    // Methods
+
+    /**
+     * This method builds the internal path element sequence
+     * by parsing it from the given path string.
+     * 
+     * @param[in]
+     *     This is the string containing the whole path of the URI.
+     * 
+     * @return
+     *     An indication if the path was parsed successfully or not
+     *     is returned.
+     */
+    bool ParsePath(std::string pathString) {
+        if (pathString == "/") {
+            path.push_back("");
+        } else if (!pathString.empty()) {
+            for(;;) {
+                size_t slashPos = pathString.find('/');
+                path.push_back(pathString.substr(0, slashPos));
+                if (slashPos == std::string::npos) {
+                    break;
+                }
+                pathString = pathString.substr(slashPos + 1);
+            }
+        }
+        return true;
+    }
 };
 
 Uri::~Uri() = default;
@@ -180,17 +210,8 @@ bool Uri::ParseFromString(const std::string &uriString)
     }
 
     // Next, parse the path.
-    if (pathString == "/") {
-        impl_->path.push_back("");
-    } else if (!pathString.empty()) {
-        for(;;) {
-            size_t slashPos = pathString.find('/');
-            impl_->path.push_back(pathString.substr(0, slashPos));
-            if (slashPos == std::string::npos) {
-                break;
-            }
-            pathString = pathString.substr(slashPos + 1);
-        }
+    if (!impl_->ParsePath(pathString)) {
+        return false;
     }
 
     // Finally, parse the query and the fragment.

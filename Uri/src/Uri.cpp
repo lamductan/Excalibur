@@ -39,6 +39,17 @@ struct Uri::Impl {
      * is a vector contains the segments of the path.
      */
     std::vector< std::string > path;
+
+    /**
+     * This flag indicates whether or not the URI 
+     * has a port number.
+     */
+    bool hasPort;
+
+    /**
+     * This is the "port" element of the URI, if exists.
+     */
+    uint16_t port;    
 };
 
 Uri::~Uri() = default;
@@ -55,6 +66,8 @@ void Uri::reset_impl()
     impl_->authority.clear();
     impl_->host.clear();
     impl_->path.clear();
+    impl_->hasPort = false;
+    impl_->port = 0;
 }
 
 bool Uri::ParseFromString(const std::string &uriString)
@@ -81,6 +94,24 @@ bool Uri::ParseFromString(const std::string &uriString)
 
         size_t hostEnd = impl_->authority.find(':');
         impl_->host = impl_->authority.substr(0, hostEnd);
+        if (hostEnd != std::string::npos) {
+            std::string portString = impl_->authority.substr(hostEnd + 1);
+            uint32_t newPort = 0;
+            for(auto c : portString) {
+                if (
+                    (c < '0')
+                    || (c > '9')
+                ) {
+                    return false;
+                }
+                newPort = newPort * 10 + uint16_t(c - '0');
+                if (newPort & ~((1 << 16) - 1)) {
+                    return false;
+                }
+            }
+            impl_->port = (uint16_t)newPort;
+            impl_->hasPort = true;
+        }
     }
 
     size_t pathEnd = std::min(rest.find('#'), rest.find('?'));
@@ -117,4 +148,15 @@ std::vector<std::string> Uri::GetPath() const
 {
     return impl_->path;
 }
+
+bool Uri::HasPort() const
+{
+    return impl_->hasPort;
+}
+
+uint16_t Uri::GetPort() const
+{
+    return impl_->port;
+}
+
 } // namespace Uri

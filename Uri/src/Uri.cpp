@@ -57,11 +57,6 @@ struct Uri::Impl {
     std::string scheme;
 
     /**
-     * This is the "authority" element of the URI.
-     */
-    std::string authority;
-
-    /**
      * This is the "host" element of the URI.
      */
     std::string host;
@@ -104,14 +99,15 @@ struct Uri::Impl {
      * This method builds the internal path element sequence
      * by parsing it from the given path string.
      * 
-     * @param[in]
+     * @param[in] pathString
      *     This is the string containing the whole path of the URI.
      * 
      * @return
      *     An indication if the path was parsed successfully or not
      *     is returned.
      */
-    bool ParsePath(std::string pathString) {
+    bool ParsePath(std::string pathString) 
+    {
         if (pathString == "/") {
             path.push_back("");
         } else if (!pathString.empty()) {
@@ -123,6 +119,68 @@ struct Uri::Impl {
                 }
                 pathString = pathString.substr(slashPos + 1);
             }
+        }
+        return true;
+    }
+
+    /**
+     * This method parses the elements that make up the authority
+     * composite part of the URI, by parsing it from the given string.
+     * 
+     * @param[in] authorityString
+     *     This is the string containing the whole authority part 
+     *     of the URI.
+     * 
+     * @return
+     *     An indication if the authority was parsed successfully or not
+     *     is returned.
+     */
+    bool ParseAuthority(const std::string& authorityString)
+    {
+        std::string hostAndPort;
+        size_t userInfoDelimiter = authorityString.find('@');
+        if (userInfoDelimiter == std::string::npos) {
+            hostAndPort = authorityString;
+        } else {
+            userInfo = authorityString.substr(0, userInfoDelimiter);
+            hostAndPort = authorityString.substr(userInfoDelimiter + 1);
+        }
+
+        // Next, parse the host and port of the authority.
+        size_t hostEnd = hostAndPort.find(':');
+        host = hostAndPort.substr(0, hostEnd);
+        if (hostEnd != std::string::npos) {
+            std::string portString = hostAndPort.substr(hostEnd + 1);
+            if (!ParseUint16(portString, port)) {
+                return false;
+            }
+            hasPort = true;
+        }
+        return true;
+    }
+
+     /**
+     * This method parses the query and/or fragemnt of the URI
+     * by parsing it from the given string, if exists.
+     * 
+     * @param[in] queryAndOrFragmentString
+     *     This is the string containing the query and/or fragment of the URI.
+     * 
+     * @return
+     *     An indication if the query and/or fragment was parsed 
+     *     successfully or not is returned.
+     */
+    bool ParseQueryAndFragment(const std::string& queryAndOrFragmentString)
+    {
+        size_t fragmentStart = queryAndOrFragmentString.find('#');
+        if (fragmentStart != std::string::npos) {
+            query = queryAndOrFragmentString.substr(0, fragmentStart);
+            fragment = queryAndOrFragmentString.substr(fragmentStart + 1);
+        } else {
+            query = queryAndOrFragmentString;
+        }
+        if (query.length() > 0) {
+            query = query.substr(1);
         }
         return true;
     }
@@ -139,7 +197,6 @@ void Uri::reset_impl()
 {
     impl_->hasScheme = false;
     impl_->scheme.clear();
-    impl_->authority.clear();
     impl_->host.clear();
     impl_->path.clear();
     impl_->hasPort = false;
@@ -167,7 +224,6 @@ bool Uri::ParseFromString(const std::string &uriString)
 
     size_t pathEnd = rest.find_first_of("?#");
     std::string authorityAndPathString = rest.substr(0, pathEnd);
-    std::string hostPortAndPathString;
     std::string pathString;
     std::string queryAndOrFragment;
 
@@ -181,30 +237,17 @@ bool Uri::ParseFromString(const std::string &uriString)
         if (authorityEnd == std::string::npos) {
             authorityEnd = authorityAndPathString.length();
         }
+        pathString = authorityAndPathString.substr(authorityEnd);
+        std::string authorityString = authorityAndPathString.substr(
+            0, authorityEnd);
+        
+        // Parse the elements inside the authority string
+        if (!impl_->ParseAuthority(authorityString)) {
+            return false;
+        }
 
         // Next, check if there is a UserInfo, and if so, extract it.
-        size_t userInfoDelimiter = authorityAndPathString.find('@');
-        if (userInfoDelimiter == std::string::npos) {
-            hostPortAndPathString = authorityAndPathString;
-        } else {
-            impl_->userInfo = authorityAndPathString.substr(
-                0, userInfoDelimiter);
-            hostPortAndPathString = authorityAndPathString.substr(
-                userInfoDelimiter + 1);
-        }
-
-        // Next, parse the host and port of the authority.
-        impl_->authority = hostPortAndPathString.substr(0, authorityEnd);
-        size_t hostEnd = impl_->authority.find(':');
-        impl_->host = impl_->authority.substr(0, hostEnd);
-        if (hostEnd != std::string::npos) {
-            std::string portString = impl_->authority.substr(hostEnd + 1);
-            if (!ParseUint16(portString, impl_->port)) {
-                return false;
-            }
-            impl_->hasPort = true;
-        }
-        pathString = authorityAndPathString.substr(authorityEnd);
+        
     } else {
         pathString = authorityAndPathString;
     }
@@ -217,16 +260,7 @@ bool Uri::ParseFromString(const std::string &uriString)
     // Finally, parse the query and the fragment.
     if (pathEnd != std::string::npos) {
         queryAndOrFragment = rest.substr(pathEnd);
-        size_t fragmentStart = queryAndOrFragment.find('#');
-        if (fragmentStart != std::string::npos) {
-            impl_->query = queryAndOrFragment.substr(0, fragmentStart);
-            impl_->fragment = queryAndOrFragment.substr(fragmentStart + 1);
-        } else {
-            impl_->query = queryAndOrFragment;
-        }
-        if (impl_->query.length() > 0) {
-            impl_->query = impl_->query.substr(1);
-        }
+        impl_->ParseQueryAndFragment(queryAndOrFragment);
     }
     return true;
 }

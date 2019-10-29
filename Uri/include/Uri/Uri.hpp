@@ -50,6 +50,7 @@ public:
    * 
    * @return
    *     A string represents the "scheme" of the URI.
+   *
    * @retval
    *     An empty string if the URI has no scheme.
    */
@@ -60,6 +61,7 @@ public:
    * 
    * @return
    *     A string represents the "host" of the URI.
+   *
    * @retval
    *     An empty string if the URI has no host.
    */
@@ -72,6 +74,7 @@ public:
    * @return
    *     A vector of strings represents the path of
    *     the URI.
+   *
    * @note
    *     If the first step of the path is an empty string,
    *     then the URI has an absolute path. 
@@ -100,6 +103,59 @@ public:
    *     hasPort method returns true.
    */
   uint16_t GetPort() const;
+
+  /**
+   * This method returns an indication of whether or not the URI
+   * is a relative reference.
+   * 
+   * @return
+   *     An indication of whether or not the URI
+   *     is a relative reference.
+   */
+  bool IsRelativeReference() const;
+
+  /**
+   * This method returns an indication of whether or not the URI
+   * contains a relative path.
+   * 
+   * @return
+   *     An indication of whether or not the URI
+   *     contains a relative path.
+   */
+  bool ContainsRelativePath() const;
+
+  /**
+   * This method gets the "query" element of the URI.
+   * 
+   * @return
+   *     A string represents the "query" of the URI.
+   *
+   * @retval
+   *     An empty string if the URI has no query.
+   */
+  std::string GetQuery() const;
+
+  /**
+   * This method gets the "fragment" element of the URI.
+   * 
+   * @return
+   *     A string represents the "fragment" of the URI.
+   *
+   * @retval
+   *     An empty string if the URI has no fragment.
+   */
+  std::string GetFragment() const;
+
+  /**
+   * This method gets the "user info" element of the URI.
+   * 
+   * @return
+   *     A string represents the "user info" of the URI.
+   *
+   * @retval
+   *     An empty string if the URI has no user info.
+   */
+  std::string GetUserInfo() const;
   
   // Private properties
 private:
